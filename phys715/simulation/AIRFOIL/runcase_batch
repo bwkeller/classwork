@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Launch script:
+./runcase_coupling
+

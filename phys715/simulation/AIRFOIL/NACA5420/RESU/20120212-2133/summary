@@ -1,0 +1,25 @@
+========================================================
+Start time       : Sunday February 12 21:33:53 CEST 2012
+========================================================
+  Command        : /usr/local/bin/code_saturne run --param study.xml
+========================================================
+  Package path   : /usr/local
+  ----------------------------------------------------
+  MPI path       : 
+  MPI type       : OpenMPI
+  ----------------------------------------------------
+  User           : malzraa
+  ----------------------------------------------------
+  Machine        : Linux angband 2.6.39-bpo.2-amd64 #1 SMP Tue Jul 26 10:35:23 UTC 2011 x86_64 
+  N Procs        : 4
+  ----------------------------------------------------
+  Case           : NACA5420
+    directory    : /home/malzraa/phys715/simulation/AIRFOIL/NACA5420
+    results dir. : /home/malzraa/phys715/simulation/AIRFOIL/NACA5420/RESU/20120212-2133
+    preprocessor : /usr/local/libexec/code_saturne/cs_preprocess
+    partitioner  : /usr/local/libexec/code_saturne/cs_partition
+    solver       : /usr/local/libexec/code_saturne/cs_solver
+  ----------------------------------------------------
+========================================================
+Finish time      : Sunday February 12 21:34:02 CEST 2012
+========================================================

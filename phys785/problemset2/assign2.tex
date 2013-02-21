@@ -98,9 +98,7 @@ $\sqrt{N_i^{-1}}$ as my uncertainties in $\log M_i$ and $\log \frac{dN_i}{dM_i}$
 I then used a least squares optimizer from the Scipy python library to fit a
 power law (linear in logspace) to $\frac{dN}{dM}$ vs. $M$.  I weighted the
 error function using the geometric mean of my two uncertainties.
-The result of this fit is a power law with $\alpha = 1.9 \pm 0.3$.  This is
-exactly what we would expect if the cumulative mass function has a power law
-with $\alpha = 1$, since the derivative will reduce $\alpha$ by one.
+The result of this fit is a power law with $\alpha = 1.9 \pm 0.3$.
 $$\frac{dN}{dM} \propto M^{-1.9\pm 0.3}$$
 This fit, along with the data, is shown in figure 2.
 \begin{figure}

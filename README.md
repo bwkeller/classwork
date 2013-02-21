@@ -1,4 +1,4 @@
 classwork
 =========
 
-Assignments and Homework from my Undergraduate and Graduate courses
+Assignments and Homework from my Graduate courses

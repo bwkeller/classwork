@@ -48,7 +48,7 @@ of energy down from large scale turbulent motions down to scales where viscous
 dissipation becomes important ($\lambda \approx \eta$).
 \subsection{MHD Turbulence}
 Modern theories of turbulence in molecular clouds rely on the interplay between
-"pure" fluid turbulence, and turbulence within magnetic fields.  By storing
+``pure" fluid turbulence, and turbulence within magnetic fields.  By storing
 energy within these fields, the decay of turbulence can be delayed long enough
 to allow more modest energy sources to drive the turbulence observed in
 molecular clouds.  \citet{shu1987} reports magnetic field strengths in a number
@@ -81,7 +81,7 @@ heat, and dynamo processes can pull kinetic energy out of the fluid and store it
 in magnetic fields.  3D simulations of MHD turbulence suggest it decays in
 approximately $\tau_{cross} = L/v_{rms}$, where $L$ is the scale of the cloud,
 and $v_{rms}$ is the rms turbulent velocity. In environments like molecular
-clouds, where turbulence is highly supersonic, the effects of MHD vs. "pure"
+clouds, where turbulence is highly supersonic, the effects of MHD vs. ``pure"
 hydrodynamic turbulence may be small \citep{elm2004}
 
 \section{Observational Evidence}
@@ -139,12 +139,51 @@ bubbles on a scale of $50-500pc$ (ie, on the scales comparable tot the total
 cloud size), which then cascades down the to smaller scales.
 \section{Impact of Turbulence on Cloud Structure \& Evolution}
 \subsection{Cloud Formation}
+The largest effect of turbulence on molecular clouds may not be intra-cloud
+phenomena, but instead the actual \textit{formation} of clouds.
+\citet{larson1981} suggested from his observations that cloud lifetimes were on
+the order of $10^7 yr$, about twice their free-fall time.  If most clouds are
+this young, this implies that clouds are both formed and destroyed on a
+relatively continuous and rapid basis. Recent simulation results from
+\citet{hopk2011} support this picture of a constantly replenished supply of
+short-lived GMCs, and some suggest that even shorter lifetimes of a few $10^6$
+years are more likely \cite{mac2004}.
+
+Early models of cloud formation relied on a hierarchical merger type picture of
+cloud collision and coalescence to explain the production of giant molecular
+clouds from the atomic and ionized medium.  \citet{larson1981} reports that
+these models fail to produce the production rates needed to sustain the observed
+abundance of molecular clouds in the galaxy in light of their relatively short
+lifetime (these models were developed with the assumption that cloud lifetimes
+were on the order of $10^8 yr$).  Turbulence within the larger ISM can produce, 
+in the highly compressible supersonic regime obeserved, strong density perturbations and
+clumpy, filiamentary structures like that seen in figure NUM.  \citet{val2004}
+presents a picture of supersonic turbulence or colliding flows producing thin, 
+shocked sheets that then fragments to form molecular clouds. Coupled with
+thermal multiphase instabilities, this can act to rapidly build dense clumps
+that will quickly become molecular clouds as atomic hydrogen becomes molecular
+on dust grains and the high densities of the cloud allow for self-shielding.
+The dominant theory of cloud formation currently is that shocks, from turbulence
+and supernovae, build large overdensities where molecule formation is very
+rapid, and that cloud dispersal by feedback (or the same turbulent flow that
+can form them) happens on the order of a roughly 1-10 Myr.
 \subsection{Turbulent Pressure Support}
 Observations of molecular clouds provide two perplexing facts, namely that they
 are typically cold (10-100K), and massive (much larger than the Jeans mass
-$M_J$) \citep{gold1978}.  Yet they do not show evidence of rapid collapse, or of being the
-extremely short lived objects that these facts would imply.  This suggests that
-a there is some sort of non-thermal pressure supporting these clouds.
+$M_J$) \citep{gold1978}.  This, coupled with their relatively short lifetimes,
+seems to imply that they collapse gravitationally relatively quickly after they 
+form.  However, measurements of star formation efficiency within these clouds,
+and of the relative stellar mass fractions of the milky way and other galaxies
+tells us that these clouds only convert a small fraction of their mass into
+stars \citep{mac2004}, and that their lifetimes are in fact longer than their
+free-fall times. This suggests that
+a there is some sort of non-thermal pressure supporting these clouds, in
+addition to processes that can disrupt or destroy clouds before they can convert
+most of their mass into stars. While disruption of clouds by feedback can reduce
+their star formation efficiency (by destroying them after they form only a few
+massive stars)\citep{hopk2011}, the observation of super-Jeans mass clouds that
+are older than the time needed for them to collapse needs this additional
+mechanism to keep clouds supported.
 In molecular clouds that are in hydrostatic equilibrium, determining the sources
 of pressure that supports the clouds against gravitational collapse is key in
 determining which clouds will collapse, and why.  Non-thermal pressure support is
@@ -161,6 +200,28 @@ For molecular clouds, where turbulence tends to be highly supersonic, this can
 act to significantly increase the stability of a cloud against gravitational
 collapse.
 \subsection{Mixing \& Chemistry}
+Molecular clouds, being \textit{molecular}, are sites in which more 
+complicated ISM chemistry can occur.  Since these clouds are extremely dense and
+cool, while many of the reactants for forming simple ($CO$, $HCN$, etc.) and
+complex (PAHs, amino acids, etc) are abundant, the conditions in the molecular
+cloud are often not ideal for slow, steady formation of these compoounds.
+PDRs at the edge of clouds can catalyze the formation of some compounds, but
+destroy others.  Many of the compounds in molecular clouds have negative heats
+of formation, implying they would form extremely slowly at the mean $\approx
+10K$ temperatures in the cloud.  In addition to this, chemical reaction networks
+found that early-time solutions to time-dependent evolution equations (rather
+than equalibrium concentrations) matched most closely the observed abundances in
+molecular clouds\citep{scalo2004}.
+
+Turbulence offers an explanation for all of these observations.  Since the
+interiors of clouds are not isotropic in density, temperature, or UV flux,
+turbulent mixing can transport species into regions where their production is
+enhanced, and then spread the products into the rest of the cloud.  Decay of
+turbulence and shock heatingcan result in local temperature increases, allowing 
+endothermic reactions to produce species that otherwise would not be 
+seen\citep{xie1995}.  MHD turbulence
+can have a significant impact on ion-neutral reactions by magnetically forcing
+ions, producing an effectively faster mixing rate for ionized species.
 \subsection{Larson's Laws \& Star formation}
 Strangely, turbulence can both support clouds (on a global scale), and cause
 collapse (on smaller scales) \citep{mac2004}.  Since molecular cloud
@@ -189,7 +250,7 @@ fragmentation using the excursion set formalism similar to that previously used
 succesfully to predict the Halo Mass Function and clustering rates in
 large-scale cosmological structures by \citet{press1974}.  By applying this tool
 to the turbulent fluid of a molecular cloud, and tracking the first and last
-crossings of overdense perturbations (see figure NUM), the mass function of
+crossings of overdense perturbations (see figures NUM and NUM), the mass function of
 protostellar cores, (and thus the IMF) can be predicted using Monte Carlo
 realizations of the turbulent density spectrum.  This analytic framework
 can be used to generally predict the mass function from fragmentation
@@ -198,8 +259,20 @@ of clouds themselves, if they do in fact
 form from turbulent fragmentation).  This framework suggests that gravitational
 collapse of turbulent overdensity is the dominant driving force for much of the
 substructure within molecular clouds.
-\section{Conclusion}
 
+\section{Conclusion}
+It is clear that on every scale related to the physics of molecular clouds, from
+the atomic and molecular chemical processes within them, to the actual formation
+of the clouds themselves, turbulence is a key ingredient.  Theoretical
+predictions from as early as 1951, and observations from the 1970s confirmed
+that turbulence was deeply related to the internal structure and evolution of
+molecular clouds.  Recent work has continued to build upon this, suggesting that
+the chemistry of the molecular ISM, and the mass function of stars are also 
+closely tied to the turbulent motions within molecular clouds.  As simulations
+and observations further constrain the energy spectrum, growth rate, and
+dissipation of turbulence, a key component to building a unified picture 
+of molecular cloud creation and destruction, star formation, and interstellar 
+chemistry will be complete.
 \begin{thebibliography}{}
 	\bibitem[Chandrasekhar(1951)]{chandra1951} Chandrasekhar, S.\ 1951, 
 		Royal Society of London Proceedings Series A, 210, 26 
@@ -211,7 +284,7 @@ substructure within molecular clouds.
 			J.~P.\ 1977, \apj, 218, 148 
 	\bibitem[Goldsmith \& Langer(1978)]{gold1978} Goldsmith, P.~F., \& Langer,
 			W.~D.\ 1978, \apj, 222, 881 
-		\bibitem[Larson(1979)]{larson1979} Larson, R.~B.\ 1979, \mnras, 
+	\bibitem[Larson(1979)]{larson1979} Larson, R.~B.\ 1979, \mnras, 
 		186, 479 
 	\bibitem[Norman \& Silk(1980)]{norman1980} Norman, C., \& Silk, J.\ 
 		1980, \apj,	238, 158 
@@ -223,6 +296,8 @@ substructure within molecular clouds.
 			1991, \apj, 376, 214 
 	\bibitem[Kolmogorov(1991)]{kolm1991} Kolmogorov, A.~N.\ 1991, 
 		Royal Society of London Proceedings Series A, 434, 9 
+	\bibitem[Xie et al.(1995)]{xie1995} Xie, T., Allen, M., 
+		\& Langer, W.~D.\ 1995, \apj, 440, 674 
 	\bibitem[Evans (1999)]{evans1999} Evans, N. J.\
 			1999, \araa, 37, 311
 	\bibitem[Mac Low(1999)]{mac1999} Mac Low, M.-M.\ 1999, \apj, 
@@ -235,9 +310,14 @@ substructure within molecular clouds.
 			2004, \araa, 42, 275
 	\bibitem[Mac Low \& Klessen(2004)]{mac2004} Mac Low, M.-M., \& Klessen,
 		R.~S.\ 2004, Reviews of Modern Physics, 76, 125 
+	\bibitem[V{\'a}zquez-Semadeni et al.(2006)]{val2006}
+		V{\'a}zquez-Semadeni, E., Ryu, D., Passot, T., Gonz{\'a}lez, R.~F., 
+		\& Gazol, A.\ 2006, \apj, 643, 245 
 	\bibitem[Tielens(2010)]{tiel2010} Tielens, A.~G.~G.~M.\ 2010, 
 		The Physics and Chemistry of the Interstellar Medium, by 
 		A.~G.~G.~M.~Tielens, Cambridge, UK: Cambridge University Press,	2010
+	\bibitem[Hopkins et al.(2011)]{hopk2011} Hopkins, P.~F., 
+		Quataert, E., \& Murray, N.\ 2011, \mnras, 417, 950 
 	\bibitem[Crutcher(2012)]{crutch2012} Crutcher, R.~M.\ 2012, \araa,
 		50, 29 
 	\bibitem[Agertz et al.(2012)]{agertz2012} Agertz, O., Kravtsov, 

@@ -1,4 +1,5 @@
 \documentclass[12pt, preprint]{aastex}
+\usepackage{float}
 \doublespace
 \begin{document}
 
@@ -96,7 +97,7 @@ clouds, along with the velocity dispersion of stellar spectra collected from
 young (less than a few $Gyr$ old) stars to estimate the dispersion in cool clouds.  
 The use of young stars was justified by the fact that they should retain the
 momentum of the gas they formed from.  His
-observation covered scales from a few $pc$ up to $20 kpc$.  Figure NUM shows
+observation covered scales from a few $pc$ up to $20 kpc$.  Figure 1 shows
 the relationship he found between region size and the velocity dispersion
 within these regions is in good agreement with the $1/3$ slope power law
 predicted by Kolmogorov turbulence.
@@ -106,6 +107,15 @@ emission in the FCRAO radio telescope's Outer Galaxy Survey.  to calculate the
 power spectrum of molecular clouds in the outer galaxy.  He found values for the
 power spectrum slope $\beta$ ranging $\approx 1.5$ to $\approx 3$, bounding the
 Kolmogorov value of $5/3$.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.4]{figures/larsonlaw_larson1981.eps}
+	\caption{\citet{larson1981}'s results showing a tight correlation between
+	the velocity dispersion within a cloud and the size scale of that cloud.
+The slope of the fitted line is 0.38, while the slope of the Kolmogorov
+density-velocity dispersion PDF is 1/3.}
+\end{figure}
 \section{Origins of Turbulence}
 The observation of turbulence in molecular clouds raises two major questions.
 Firstly, from whence does the energy within the turbulent motions come, and
@@ -157,7 +167,7 @@ abundance of molecular clouds in the galaxy in light of their relatively short
 lifetime (these models were developed with the assumption that cloud lifetimes
 were on the order of $10^8 yr$).  Turbulence within the larger ISM can produce, 
 in the highly compressible supersonic regime observed, strong density perturbations and
-clumpy, filamentary structures like that seen in figure NUM.  \citet{val2004}
+clumpy, filamentary structures like that seen in figure 2.  \citet{val2006}
 presents a picture of supersonic turbulence or colliding flows producing thin, 
 shocked sheets that then fragments to form molecular clouds. Coupled with
 thermal multiphase instabilities, this can act to rapidly build dense clumps
@@ -167,6 +177,16 @@ The dominant theory of cloud formation currently is that shocks, from turbulence
 and supernovae, build large overdensities where molecule formation is very
 rapid, and that cloud dispersal by feedback (or the same turbulent flow that
 can form them) happens on the order of a roughly 1-10 Myr.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.4]{figures/turbulent_LMC_elm2004.eps}
+	\caption{21cm emission from the Large Magellanic Cloud.  Note the
+		filiaments, voids, and clumps in this HI emission map.  These
+		structures, and the associated 2D power spectrum of them, are closely
+		associated with turbulent motions, and can lead to the rapid production
+	of molecular clouds in overdense regions.  Image from \citet{elm2004}.}
+\end{figure}
 \subsection{Turbulent Pressure Support}
 Observations of molecular clouds provide two perplexing facts, namely that they
 are typically cold (10-100K), and massive (much larger than the Jeans mass
@@ -250,7 +270,7 @@ fragmentation using the excursion set formalism similar to that previously used
 successfully to predict the Halo Mass Function and clustering rates in
 large-scale cosmological structures by \citet{press1974}.  By applying this tool
 to the turbulent fluid of a molecular cloud, and tracking the first and last
-crossings of overdense perturbations (see figures NUM and NUM), the mass function of
+crossings of overdense perturbations (see figures 3 and 4), the mass function of
 protostellar cores, (and thus the IMF) can be predicted using Monte Carlo
 realisations of the turbulent density spectrum.  This analytic framework
 can be used to generally predict the mass function from fragmentation
@@ -259,6 +279,24 @@ of clouds themselves, if they do in fact
 form from turbulent fragmentation).  This framework suggests that gravitational
 collapse of turbulent overdensity is the dominant driving force for much of the
 substructure within molecular clouds.
+
+\begin{figure}[H] 
+	\centering
+	\includegraphics[scale=0.3]{figures/structure_hopk2013.eps}
+	\caption{The key feature of \citet{hopk2013}'s theory of turbulent
+		fragmentation is the transition across the line of stability (dashed
+		red) where overdensities can collapse.  This line shows when
+		gravitational potential overwhelms internal support.  By evalauating realizations of turbulent
+		overdensities, the spectrum of overdensities that cross this barrier and
+	become bound can be determined.}
+\end{figure}
+
+\begin{figure}[H] 
+	\centering
+	\includegraphics[scale=0.3]{figures/fragtree_hopk2013.eps}
+	\caption{In the \citet{hopk2013} model, turbulent overdensities fragment
+	over time in a cascading ``tree", producing a spectrum of clump/cloud sizes}
+\end{figure}
 
 \section{Conclusion}
 It is clear that on every scale related to the physics of molecular clouds, from
@@ -273,6 +311,7 @@ and observations further constrain the energy spectrum, growth rate, and
 dissipation of turbulence, a key component to building a unified picture 
 of molecular cloud creation and destruction, star formation, and interstellar 
 chemistry will be complete.
+
 \begin{thebibliography}{}
 	\bibitem[Chandrasekhar(1951)]{chandra1951} Chandrasekhar, S.\ 1951, 
 		Royal Society of London Proceedings Series A, 210, 26 
@@ -326,4 +365,8 @@ chemistry will be complete.
 		729 
 	\bibitem[Scannapieco(2013)]{scan2013} Scannapieco, E.\ 2013, \apjl, 763, L31 
 \end{thebibliography}
+
+
+
+
 \end{document}

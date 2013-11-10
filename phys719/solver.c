@@ -12,21 +12,24 @@ typedef struct state
 	float rho;
 } state;
 
-void read_input(state* left, state* right)
+int read_input(state* left, state* right, char filename[])
 {
 	/* Input file format should store the ICs in the format:
 	 * v_l v_r
 	 * p_l p_r
 	 * rho_l rho_r
 	 */
-	FILE * infile = fopen("input.dat", "r");
-	fscanf(infile, "%f", left->v);
-	fscanf(infile, "%f", right->v);
-	fscanf(infile, "%f", left->p);
-	fscanf(infile, "%f", right->p);
-	fscanf(infile, "%f", left->rho);
-	fscanf(infile, "%f", right->rho);
+	FILE * infile = fopen(filename, "r+");
+	if(infile == NULL)
+	{
+		printf("Error reading input file");
+		return 1;
+	}
+	fscanf(infile, "%f %f", &left->v, &right->v);
+	fscanf(infile, "%f %f", &left->p, &right->p);
+	fscanf(infile, "%f %f", &left->rho, &right->rho);
 	fclose(infile);
+	return 0;
 }
 
 float guess_velocity(state left, state right)
@@ -45,9 +48,11 @@ void iterate(state left, state right)
 	float Wr, pr, prp, ar; //Mach number, pressure, dp/du, sound speed for right
 	float Cl = GAMMA*left.p/a(left);
 	float Cr = GAMMA*right.p/a(right);
+	al = a(left);
+	ar = a(right);
 	pl = 0;
 	pr = 1;//set up pl and pr so that the first while comparison passes
-	while(abs(1-pl/pr) > EPS)
+	while(fabs(1-pl/pr) > EPS)
 	{
 		if (vstar <= left.v)
 		{
@@ -64,7 +69,7 @@ void iterate(state left, state right)
 		if (vstar >= right.v)
 		{
 			Wr = (GAMMA+1)/4*(vstar-right.v)/a(right)+sqrt(1+pow((GAMMA+1)/4*(vstar-right.v)/a(right),2));
-			pr = right.p+Cr*(vstar-right.v)*Wl;
+			pr = right.p+Cr*(vstar-right.v)*Wr;
 			prp = 2*Cl*pow(Wr, 3)/(1+pow(Wr, 2));
 		}
 		else
@@ -74,14 +79,30 @@ void iterate(state left, state right)
 			prp = -1*GAMMA*pr/ar;
 		}
 		vstar -= (pl-pr)/(plp-prp);
-		printf("%f\t%f\t%f\n", left.v, vstar, right.v);
 	}
+	printf("Final State\n");
+	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+	printf("Side\tV\tP\trho\n");
+	printf("left\t%5.3f\t%5.3f\t%5.3f\n", left.v, pl, GAMMA*pl/pow(al, 2));
+	printf("right\t%5.3f\t%5.3f\t%5.3f\n", right.v, pr, GAMMA*pr/pow(ar, 2));
 }
 int main(int argc, char* argv[])
 {
+	if(argc < 2)
+	{
+		printf("Too few arguments.  Please give me an initial condition file\n");
+		return 1;
+	}
 	state left;
 	state right;
-	read_input(&left, &right);
-
+	int success = read_input(&left, &right, argv[1]);
+	if (success) return 2;
+	printf("Starting Iteration: Gamma = %3.2f Eps = %3.2e\n", GAMMA, EPS);
+	printf("Initial State\n");
+	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+	printf("Side\tV\tP\trho\n");
+	printf("left\t%5.3f\t%5.3f\t%5.3f\n", left.v, left.p, left.rho);
+	printf("right\t%5.3f\t%5.3f\t%5.3f\n", right.v, right.p, right.rho);
+	iterate(left, right);
 	return 0;
 }

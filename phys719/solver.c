@@ -48,43 +48,64 @@ void iterate(state left, state right)
 	float Wr, pr, prp, ar; //Mach number, pressure, dp/du, sound speed for right
 	float Cl = GAMMA*left.p/a(left);
 	float Cr = GAMMA*right.p/a(right);
+	Wl = 0;
+	Wr = 0;
 	al = a(left);
 	ar = a(right);
 	pl = 0;
 	pr = 1;//set up pl and pr so that the first while comparison passes
+	printf("\nInitial Guess: %5.3f\n", vstar);
 	while(fabs(1-pl/pr) > EPS)
 	{
-		if (vstar <= left.v)
+		if (vstar <= left.v)//left-moving shock
 		{
 			Wl = (GAMMA+1)/4*(vstar-left.v)/a(left)-sqrt(1+pow((GAMMA+1)/4*(vstar-left.v)/a(left),2));
 			pl = left.p+Cl*(vstar-left.v)*Wl;
 			plp = 2*Cl*pow(Wl, 3)/(1+pow(Wl, 2));
 		}
-		else
+		else//left-moving rarefaction wave
 		{
 			al = a(left)-(GAMMA-1)/2*(vstar-left.v);
-			pl = left.p*pow(al/a(left), 2*GAMMA*(GAMMA-1));
+			pl = left.p*pow(al/a(left), 2*GAMMA/(GAMMA-1));
 			plp = -1*GAMMA*pl/al;
 		}
-		if (vstar >= right.v)
+		if (vstar >= right.v)//right-moving shock
 		{
 			Wr = (GAMMA+1)/4*(vstar-right.v)/a(right)+sqrt(1+pow((GAMMA+1)/4*(vstar-right.v)/a(right),2));
 			pr = right.p+Cr*(vstar-right.v)*Wr;
 			prp = 2*Cl*pow(Wr, 3)/(1+pow(Wr, 2));
 		}
-		else
+		else//right-moving rarefaction wave
 		{
-			ar = a(right)-(GAMMA-1)/2*(vstar-right.v);
-			pr = right.p*pow(ar/a(right), 2*GAMMA*(GAMMA-1));
-			prp = -1*GAMMA*pr/ar;
+			ar = a(right)+(GAMMA-1)/2*(vstar-right.v);
+			pr = right.p*pow(ar/a(right), 2*GAMMA/(GAMMA-1));
+			prp = GAMMA*pr/ar;
 		}
 		vstar -= (pl-pr)/(plp-prp);
 	}
-	printf("Final State\n");
+	printf("\nFinal State\n");
 	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	printf("Side\tV\tP\trho\n");
-	printf("left\t%5.3f\t%5.3f\t%5.3f\n", left.v, pl, GAMMA*pl/pow(al, 2));
-	printf("right\t%5.3f\t%5.3f\t%5.3f\n", right.v, pr, GAMMA*pr/pow(ar, 2));
+	printf("Flow Velocity:%5.3f\n", vstar);
+	printf("Side\tType\tV( head & tail)\tP\trho\n");
+	if (vstar <= left.v)//left-moving shock
+	{
+		al = a(left)*sqrt(((GAMMA+1)+(GAMMA-1)*pl/left.p)/((GAMMA+1)+(GAMMA-1)*left.p/pl));
+		printf("left\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", left.v+al*Wl, pl, GAMMA*pl/pow(al, 2));
+	}
+	else//left-moving rarefaction wave
+	{
+		printf("left\tFan\t%5.3f\t%5.3f\t%5.3f\t%5.3f\n", left.v-a(left), vstar-al, pl, GAMMA*pl/pow(al, 2));
+	}
+	if (vstar >= right.v)//right-moving shock
+	{
+		ar = a(right)*sqrt(((GAMMA+1)+(GAMMA-1)*pr/right.p)/((GAMMA+1)+(GAMMA-1)*right.p/pr));
+		printf("right\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", right.v+ar*Wr, pr, GAMMA*pr/pow(ar, 2));
+	}
+	else//right-moving rarefaction wave
+	{
+		printf("right\tFan\t%5.3f\t%5.3f\t%5.3f\t%5.3f\n", right.v+a(right), vstar+ar, pr, GAMMA*pr/pow(ar, 2));
+	}
+
 }
 int main(int argc, char* argv[])
 {

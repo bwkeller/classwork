@@ -85,7 +85,7 @@ void iterate(state left, state right)
 	}
 	printf("\nFinal State\n");
 	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	printf("Flow Velocity:%5.3f\n", vstar);
+	printf("u*:%5.3f\n", vstar);
 	printf("Side\tType\tV( head & tail)\tP\trho\n");
 	if (vstar <= left.v)//left-moving shock
 	{

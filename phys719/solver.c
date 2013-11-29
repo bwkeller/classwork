@@ -50,8 +50,6 @@ void iterate(state left, state right)
 	float Cr = GAMMA*right.p/a(right);
 	Wl = 0;
 	Wr = 0;
-	al = a(left);
-	ar = a(right);
 	pl = 0;
 	pr = 1;//set up pl and pr so that the first while comparison passes
 	printf("\nInitial Guess: %5.3f\n", vstar);
@@ -67,13 +65,13 @@ void iterate(state left, state right)
 		{
 			al = a(left)-(GAMMA-1)/2*(vstar-left.v);
 			pl = left.p*pow(al/a(left), 2*GAMMA/(GAMMA-1));
-			plp = -1*GAMMA*pl/al;
+			plp = -GAMMA*pl/al;
 		}
 		if (vstar >= right.v)//right-moving shock
 		{
 			Wr = (GAMMA+1)/4*(vstar-right.v)/a(right)+sqrt(1+pow((GAMMA+1)/4*(vstar-right.v)/a(right),2));
 			pr = right.p+Cr*(vstar-right.v)*Wr;
-			prp = 2*Cl*pow(Wr, 3)/(1+pow(Wr, 2));
+			prp = 2*Cr*pow(Wr, 3)/(1+pow(Wr, 2));
 		}
 		else//right-moving rarefaction wave
 		{
@@ -90,7 +88,7 @@ void iterate(state left, state right)
 	if (vstar <= left.v)//left-moving shock
 	{
 		al = a(left)*sqrt(((GAMMA+1)+(GAMMA-1)*pl/left.p)/((GAMMA+1)+(GAMMA-1)*left.p/pl));
-		printf("left\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", left.v+al*Wl, pl, GAMMA*pl/pow(al, 2));
+		printf("left\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", left.v+a(left)*Wl, pl, GAMMA*pl/pow(al, 2));
 	}
 	else//left-moving rarefaction wave
 	{
@@ -99,7 +97,7 @@ void iterate(state left, state right)
 	if (vstar >= right.v)//right-moving shock
 	{
 		ar = a(right)*sqrt(((GAMMA+1)+(GAMMA-1)*pr/right.p)/((GAMMA+1)+(GAMMA-1)*right.p/pr));
-		printf("right\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", right.v+ar*Wr, pr, GAMMA*pr/pow(ar, 2));
+		printf("right\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", right.v+a(right)*Wr, pr, GAMMA*pr/pow(ar, 2));
 	}
 	else//right-moving rarefaction wave
 	{

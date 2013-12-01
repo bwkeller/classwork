@@ -17,12 +17,11 @@ typedef struct state
 } state;
 
 
-int read_input(state* domain[], char filename[])
+int read_input(state domain[], char filename[])
 {
 	/* Input file format should store the ICs in the format:
-	 * v_l v_r
-	 * p_l p_r
-	 * rho_l rho_r
+	 * v p rho
+	 * for each cell in the grid
 	 */
 	FILE * infile = fopen(filename, "r+");
 	if(infile == NULL)
@@ -33,9 +32,26 @@ int read_input(state* domain[], char filename[])
 	int i;
 	for(i=0; i<NCELLS; i++)
 	{
-		fscanf(infile, "%f %f %f", &domain[i]->v, &domain[i]->p, &domain[i]->rho);
+		fscanf(infile, "%f %f %f", &(domain[i].v), &(domain[i].p), &(domain[i].rho));
 	}
 	fclose(infile);
+	return 0;
+}
+
+int write_output(state domain[])
+{
+	FILE * outfile = fopen("output.dat", "w+");
+	if(outfile == NULL)
+	{
+		printf("Error opening output file");
+		return 1;
+	}
+	int i;
+	for(i=0; i<NCELLS; i++)
+	{
+		fprintf(outfile, "%f %f %f\n", domain[i].v, domain[i].p, domain[i].rho);
+	}
+	fclose(outfile);
 	return 0;
 }
 
@@ -133,7 +149,9 @@ int main(int argc, char* argv[])
 		printf("Too few arguments.  Please give me an initial condition file\n");
 		return 1;
 	}
-	int success = read_input(&domain, argv[1]);
+	int success = read_input(domain, argv[1]);
+	if (success) return 2;
+	success = write_output(domain);
 	if (success) return 2;
 	return 0;
 }

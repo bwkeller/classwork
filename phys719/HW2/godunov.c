@@ -4,7 +4,11 @@
 #define GAMMA 1.4 //Adiabatic index 7/5 for diatomic fluid
 #define a(s) sqrt(GAMMA*s.p/s.rho) //Macro for calculating the soundspeed a
 
-//This struct defines the u state vector.
+#define NCELLS 400
+#define XMAX 2
+#define DX 2*float(XMAX)/NCELLS
+
+//This struct defines the u state vector that the Fast Riemann Solver wants
 typedef struct state
 {
 	float v;
@@ -12,7 +16,8 @@ typedef struct state
 	float rho;
 } state;
 
-int read_input(state* left, state* right, char filename[])
+
+int read_input(state* domain[], char filename[])
 {
 	/* Input file format should store the ICs in the format:
 	 * v_l v_r
@@ -25,9 +30,11 @@ int read_input(state* left, state* right, char filename[])
 		printf("Error reading input file");
 		return 1;
 	}
-	fscanf(infile, "%f %f", &left->v, &right->v);
-	fscanf(infile, "%f %f", &left->p, &right->p);
-	fscanf(infile, "%f %f", &left->rho, &right->rho);
+	int i;
+	for(i=0; i<NCELLS; i++)
+	{
+		fscanf(infile, "%f %f %f", &domain[i]->v, &domain[i]->p, &domain[i]->rho);
+	}
 	fclose(infile);
 	return 0;
 }
@@ -81,47 +88,52 @@ void iterate(state left, state right)
 		}
 		vstar -= (pl-pr)/(plp-prp);
 	}
-	printf("\nFinal State\n");
-	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	printf("u*:%5.3f\n", vstar);
-	printf("Side\tType\tV( head & tail)\tP\trho\n");
 	if (vstar <= left.v)//left-moving shock
 	{
 		al = a(left)*sqrt(((GAMMA+1)+(GAMMA-1)*pl/left.p)/((GAMMA+1)+(GAMMA-1)*left.p/pl));
-		printf("left\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", left.v+a(left)*Wl, pl, GAMMA*pl/pow(al, 2));
+		/*result.left.v = left.v+a(left)*Wl;*/
+		/*result.left.p = pl;*/
+		/*result.left.rho =  GAMMA*pl/pow(al, 2);*/
+		/*result.fan = result.fan & ~1; // Zero out the left-fan bit*/
 	}
 	else//left-moving rarefaction wave
 	{
-		printf("left\tFan\t%5.3f\t%5.3f\t%5.3f\t%5.3f\n", left.v-a(left), vstar-al, pl, GAMMA*pl/pow(al, 2));
+		/*result.left.v = left.v-a(left);*/
+		/*result.left.p = pl;*/
+		/*result.left.rho =  GAMMA*pl/pow(al, 2);*/
+		/*result.centre.v =vstar-al;*/
+		/*result.centre.p = pl;*/
+		/*result.centre.rho =  GAMMA*pl/pow(al, 2);*/
+		/*result.fan = result.fan | 1; // Set the left-fan bit*/
 	}
 	if (vstar >= right.v)//right-moving shock
 	{
 		ar = a(right)*sqrt(((GAMMA+1)+(GAMMA-1)*pr/right.p)/((GAMMA+1)+(GAMMA-1)*right.p/pr));
-		printf("right\tShock\t%5.3f\t\t%5.3f\t%5.3f\n", right.v+a(right)*Wr, pr, GAMMA*pr/pow(ar, 2));
+		/*result.right.v = right.v+a(right)*Wr;*/
+		/*result.right.p = pr;*/
+		/*result.right.rho =  GAMMA*pr/pow(ar, 2);*/
+		/*result.fan = result.fan & ~2; // Zero out the right-fan bit*/
 	}
 	else//right-moving rarefaction wave
 	{
-		printf("right\tFan\t%5.3f\t%5.3f\t%5.3f\t%5.3f\n", right.v+a(right), vstar+ar, pr, GAMMA*pr/pow(ar, 2));
+		/*result.right.v = right.v+a(right);*/
+		/*result.right.p = pr;*/
+		/*result.right.rho =  GAMMA*pr/pow(ar, 2);*/
+		/*result.centre.v =vstar+ar;*/
+		/*result.centre.p = pr;*/
+		/*result.centre.rho =  GAMMA*pr/pow(ar, 2);*/
+		/*result.fan = result.fan | 2; // Set the left-fan bit*/
 	}
-
 }
 int main(int argc, char* argv[])
 {
+	state domain[NCELLS];
 	if(argc < 2)
 	{
 		printf("Too few arguments.  Please give me an initial condition file\n");
 		return 1;
 	}
-	state left;
-	state right;
-	int success = read_input(&left, &right, argv[1]);
+	int success = read_input(&domain, argv[1]);
 	if (success) return 2;
-	printf("Starting Iteration: Gamma = %3.2f Eps = %3.2e\n", GAMMA, EPS);
-	printf("Initial State\n");
-	printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	printf("Side\tV\tP\trho\n");
-	printf("left\t%5.3f\t%5.3f\t%5.3f\n", left.v, left.p, left.rho);
-	printf("right\t%5.3f\t%5.3f\t%5.3f\n", right.v, right.p, right.rho);
-	iterate(left, right);
 	return 0;
 }

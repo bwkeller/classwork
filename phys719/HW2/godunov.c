@@ -5,11 +5,11 @@
 #define GAMMA 1.4 //Adiabatic index 7/5 for diatomic fluid
 #define a(s) sqrt(GAMMA*s.p/s.rho) //Macro for calculating the soundspeed a
 
-#define TIME  0.1//Total time to run for
+#define TIME  1e-1//Total time to run for
 #define NCELLS 40 //Size of the domain in cells
 #define XMAX 2 //Physical size of domain
 #define DX (2.0*XMAX/NCELLS) //Grid spacing
-#define DT (DX/4.0) //Timestep size
+#define DT (DX/200.0) //Timestep size
 
 //This struct defines the u state vector that the Fast Riemann Solver wants
 typedef struct state
@@ -209,7 +209,12 @@ flux add_flux(flux left, flux right)
 flux flux_calc(riemann sol)
 {
     state u0;
-	if(sol.vstar < 0)//Left-moving contact
+    if(sol.vstar == sol.right0.v && sol.vstar == sol.left0.v)//We need a check for symmetric shocks (ie, L=R)
+    {
+        u0 = sol.right;//either left or right would work.
+        u0.v = sol.vstar;
+    }
+    else if(sol.vstar < 0)//Left-moving contact
     {
         //Left moving shock or fan head
         if( (!sol.fanR && sol.right.v < 0) || (sol.fanR && sol.right.v < 0) )
@@ -268,7 +273,7 @@ flux flux_calc(riemann sol)
         {
             u0 = sol.left;
         }
-        else if( sol.fanL && sol.tailL < 0)//Right-moving fan tail
+        else if( sol.fanL && sol.tailL < 0)//Left-moving fan tail
         {
             float vpost;//the post-fan velocity
             if(sol.fanR)
@@ -306,8 +311,10 @@ flux flux_calc(riemann sol)
         }
 
     }
+    /*printf("u0- v: %f p: %f rho: %f\n", u0.v, u0.p, u0.rho);*/
     return fluxify(u0);
 }
+//Calculate & Apply fluxes over the range t={0,TIME}
 void evolve(state domain[])
 {
 	int j;
@@ -317,20 +324,22 @@ void evolve(state domain[])
 	flux fluxes[NCELLS];
 	for(i=0; i<TIME; i+=DT)
 	{
-		printf("Integrating, %f complete\n", (float)i/(float)TIME);
+		printf("Integrating, %f complete\n", i/(float)TIME);
 		for(j=1; j<NCELLS-1; j++)
 		{
 			left = iterate(domain[j-1], domain[j]);
 			right = iterate(domain[j], domain[j+1]);
+            flux fleft = flux_calc(left);
+            flux fright = flux_calc(right);
             if(j > 17 && j < 22)
             {
-                flux lflux = flux_calc(left);
-                flux rflux = flux_calc(right);
-				printf("j: %d l_drho: %f l_dmom: %f l_de: %f\n", j, lflux.rhodot, lflux.momentumdot, lflux.energydot);
-				printf("j: %d r_drho: %f r_dmom: %f r_de: %f\n", j, rflux.rhodot, rflux.momentumdot, rflux.energydot);
+                /*printf("IC L j: %d l_rho: %f l_p: %f l_v: %f\n", j, domain[j-1].rho, domain[j-1].p, domain[j-1].v);*/
+                /*printf("IC R j: %d l_rho: %f l_p: %f l_v: %f\n", j, domain[j].rho, domain[j].p, domain[j].v);*/
+                /*printf("flux j: %d l_drho: %f l_dmom: %f l_de: %f\n", j, fleft.rhodot, fleft.momentumdot, fleft.energydot);*/
+                /*printf("IC L j: %d r_rho: %f r_p: %f r_v: %f\n", j, domain[j].rho, domain[j].p, domain[j].v);*/
+                /*printf("IC R j: %d r_rho: %f r_p: %f r_v: %f\n", j, domain[j+1].rho, domain[j+1].p, domain[j+1].v);*/
+                /*printf("flux j: %d r_drho: %f r_dmom: %f r_de: %f\n", j, fright.rhodot, fright.momentumdot, fright.energydot);*/
             }
-			flux fleft = flux_calc(left);
-			flux fright = flux_calc(right);
             fluxes[j] = add_flux(fleft, fright);
 		}
 		update(domain, fluxes);

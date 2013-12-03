@@ -5,7 +5,7 @@
 #define GAMMA 1.4 //Adiabatic index 7/5 for diatomic fluid
 #define a(s) sqrt(GAMMA*s.p/s.rho) //Macro for calculating the soundspeed a
 
-#define TIME  0.01//Total time to run for
+#define TIME  0.1//Total time to run for
 #define NCELLS 40 //Size of the domain in cells
 #define XMAX 2 //Physical size of domain
 #define DX (2.0*XMAX/NCELLS) //Grid spacing
@@ -173,6 +173,7 @@ riemann iterate(state left, state right)
     return out;
 
 }
+//Update the variables after each timestep
 void update(state domain[], flux fluxes[])
 {
 	int i;
@@ -191,7 +192,7 @@ void update(state domain[], flux fluxes[])
 		//revert to non-conserved quantities
 		domain[i].v = momentum/rho;
 		domain[i].rho = rho;
-		domain[i].p = (energy-0.5*rho*momentum*domain[i].v)*(GAMMA-1);
+		domain[i].p = (energy-0.5*momentum*domain[i].v)*(GAMMA-1);
         assert(domain[i].p > 0);
 	}
 }
@@ -208,7 +209,7 @@ flux add_flux(flux left, flux right)
 flux flux_calc(riemann sol)
 {
     state u0;
-    if(sol.vstar < 0)//Left-moving contact
+	if(sol.vstar < 0)//Left-moving contact
     {
         //Left moving shock or fan head
         if( (!sol.fanR && sol.right.v < 0) || (sol.fanR && sol.right.v < 0) )
@@ -317,31 +318,20 @@ void evolve(state domain[])
 	for(i=0; i<TIME; i+=DT)
 	{
 		printf("Integrating, %f complete\n", (float)i/(float)TIME);
-		for(j=0; j<NCELLS; j++)
+		for(j=1; j<NCELLS-1; j++)
 		{
-			if (j == 0)//Lefthand boundary
-			{
-				left = iterate(domain[j], domain[j]);
-				right = iterate(domain[j], domain[j+1]);
-			}
-			else if(j == NCELLS-1)//Righthand boundary
-			{
-				left = iterate(domain[j-1], domain[j]);
-				right = iterate(domain[j], domain[j]);
-			}
-			else
-			{
-				left = iterate(domain[j-1], domain[j]);
-				right = iterate(domain[j], domain[j+1]);
-			}
+			left = iterate(domain[j-1], domain[j]);
+			right = iterate(domain[j], domain[j+1]);
             if(j > 17 && j < 22)
             {
                 flux lflux = flux_calc(left);
                 flux rflux = flux_calc(right);
-                /*printf("j: %d l_drho: %f l_dmom: %f l_de: %f\n", j, lflux.rhodot, lflux.momentumdot, lflux.energydot);*/
-                /*printf("j: %d r_drho: %f r_dmom: %f r_de: %f\n", j, rflux.rhodot, rflux.momentumdot, rflux.energydot);*/
+				printf("j: %d l_drho: %f l_dmom: %f l_de: %f\n", j, lflux.rhodot, lflux.momentumdot, lflux.energydot);
+				printf("j: %d r_drho: %f r_dmom: %f r_de: %f\n", j, rflux.rhodot, rflux.momentumdot, rflux.energydot);
             }
-            fluxes[j] = add_flux(flux_calc(left), flux_calc(right));
+			flux fleft = flux_calc(left);
+			flux fright = flux_calc(right);
+            fluxes[j] = add_flux(fleft, fright);
 		}
 		update(domain, fluxes);
 	}

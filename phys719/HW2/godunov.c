@@ -5,11 +5,11 @@
 #define GAMMA 1.4 //Adiabatic index 7/5 for diatomic fluid
 #define a(s) sqrt(GAMMA*s.p/s.rho) //Macro for calculating the soundspeed a
 
-#define TIME  1//Total time to run for
-#define NCELLS 400 //Size of the domain in cells
+#define TIME  0.01//Total time to run for
+#define NCELLS 40 //Size of the domain in cells
 #define XMAX 2 //Physical size of domain
-#define DX 2.0*XMAX/NCELLS //Grid spacing
-#define DT DX/5 //Timestep size
+#define DX (2.0*XMAX/NCELLS) //Grid spacing
+#define DT (DX/4.0) //Timestep size
 
 //This struct defines the u state vector that the Fast Riemann Solver wants
 typedef struct state
@@ -27,6 +27,19 @@ typedef struct flux
 	float energydot;
 } flux;
 
+typedef struct riemann
+{
+    float vstar;
+    int fanL; //0 for shock, 1 for fan
+    int fanR; //0 for shock, 1 for fan
+    state left;
+    float tailL;//store the extra tail velocity for fans
+    state right;
+    float tailR;//store the extra tail velocity for fans
+    state left0;
+    state right0;
+} riemann;
+
 //Get a conservative flux from the FRS state variables
 flux fluxify(state in)
 {
@@ -37,12 +50,6 @@ flux fluxify(state in)
     return out;
 }
 
-//Get an intermediate state from a rarefaction fan
-state intermediate(float vhead, float vtail, float p, float rho)
-{
-    state out;
-    out.v = vtail;
-}
 int read_input(state domain[], char filename[])
 {
 	/* Input file format should store the ICs in the format:
@@ -90,9 +97,9 @@ float guess_velocity(state left, state right)
 	return (vtl*z+vtr)/(1+z);
 }
 
-flux iterate(state left, state right, int j)
+
+riemann iterate(state left, state right)
 {
-	flux output = {0,0,0};
 	float vstar = guess_velocity(left, right);
 	float Wl, pl, plp, al; //Mach number, pressure, dp/du, sound speed for left
 	float Wr, pr, prp, ar; //Mach number, pressure, dp/du, sound speed for right
@@ -130,110 +137,42 @@ flux iterate(state left, state right, int j)
 		}
 		vstar -= (pl-pr)/(plp-prp);
 	}
-    if (vstar >= 0)//Right-moving contact
-    {
-        if (vstar <= left.v)//use left shock
-        {
-            if(left.v+a(left)*Wl > 0)//left shock is right moving, use left state
-            {
-                /*assert(0);*/
-                return fluxify(left);
-            }
-            else//left shock is left moving, use post-shock state
-            {
-                al = a(left)*sqrt(((GAMMA+1)+(GAMMA-1)*pl/left.p)/((GAMMA+1)+(GAMMA-1)*left.p/pl));
-                state post = {left.v+a(left)*Wl, pl, GAMMA*pl/pow(al,2)};
-                return fluxify(post);
-            }
-        }
-        else//Use left-rarefaction
-        {
-            if(left.v-a(left) > 0)//Head is right moving, use left state
-            {
-                /*assert(0);*/
-                return fluxify(left);
-            }
-            //Great, now we need to get a post-fan velocity...
-            float vpost;
-            if(vstar >= right.v)//We've got a right shock
-            {
-                al = a(left)*sqrt(((GAMMA+1)+(GAMMA-1)*pl/left.p)/((GAMMA+1)+(GAMMA-1)*left.p/pl));
-                vpost =right.v+a(right)*Wr;
-            }
-            else
-            {
-                vpost = vstar;
-            }
-            if(vstar-al < 0)//Tail is left-moving, use post-fan state
-            {
-                state post = {vpost, pl, GAMMA*pl/pow(al,2)};
-                return fluxify(post);
-            }
-            else//Head is left-moving, tail is right-moving: use interpolated state
-            {
-                float vdot = (vpost-left.v)/(vstar-al-left.v+a(left));
-                float pdot = (pl-left.p)/(vstar-al-left.v+a(left));
-                float rhodot = (GAMMA*pl/pow(al,2)-left.rho)/(vstar-al-left.v+a(left));
-                state interp = {vpost-vdot*(vstar-al), pl-pdot*(vstar-al), GAMMA*pl/pow(al,2)-rhodot*(vstar-al)};
-                /*assert(0);*/
-                return fluxify(interp);
-            }
-        }
-    }
-    else//Left-moving contact
-    {
-        if (vstar >= right.v)//use right shock
-        {
-            if(right.v+a(right)*Wr < 0)//right shock is left moving, use right state
-            {
-                /*assert(0);*/
-                return fluxify(right);
-
-            }
-            else//right shock is right moving, use post-shock state
-            {
-                ar = a(right)*sqrt(((GAMMA+1)+(GAMMA-1)*pr/right.p)/((GAMMA+1)+(GAMMA-1)*right.p/pr));
-                state post = {right.v+a(right)*Wr, pr, GAMMA*pr/pow(ar,2)};
-                return fluxify(post);
-            }
-        }
-        else//Use right-rarefaction
-        {
-            if(right.v+a(right) < 0)//Head is left moving, use right state
-            {
-                /*assert(0);*/
-                return fluxify(right);
-            }
-            //Great, now we need to get a post-fan velocity...
-            float vpost;
-            if(vstar <= left.v)//We've got a left shock
-            {
-                ar = a(right)*sqrt(((GAMMA+1)+(GAMMA-1)*pr/right.p)/((GAMMA+1)+(GAMMA-1)*right.p/pr));
-                vpost =left.v+a(left)*Wl;
-            }
-            else
-            {
-                vpost = vstar;
-            }
-            if(vstar+ar > 0)//Tail is right-moving, use post-fan state
-            {
-                state post = {vpost, pr, GAMMA*pr/pow(ar,2)};
-                return fluxify(post);
-            }
-            else//Head is right-moving, tail is left-moving: use interpolated state
-            {
-                float vdot = (vpost-right.v)/(vstar+ar-right.v-a(right));
-                float pdot = (pr-right.p)/(vstar+ar-right.v-a(right));
-                float rhodot = (GAMMA*pr/pow(ar,2)-right.rho)/(vstar+ar-right.v-a(right));
-                state interp = {vpost-vdot*(vstar+ar), pr-pdot*(vstar+ar), GAMMA*pr/pow(ar,2)-rhodot*(vstar+ar)};
-                /*assert(0);*/
-                return fluxify(interp);
-            }
-        }
-    }
+    riemann out;
+    out.vstar = vstar;
+    out.left0 = left;
+    out.right0 = right;
+	if (vstar <= left.v)//left-moving shock
+	{
+		al = a(left)*sqrt(((GAMMA+1)+(GAMMA-1)*pl/left.p)/((GAMMA+1)+(GAMMA-1)*left.p/pl));
+        state lout = {left.v+a(left)*Wl, pl, GAMMA*pl/pow(al, 2)};
+        out.left = lout;
+        out.fanL = 0;
+	}
+	else//left-moving rarefaction wave
+	{
+        /*printf("%f %f\n", vstar, al);*/
+        state lout = {left.v-a(left), pl, GAMMA*pl/pow(al, 2)};
+        out.left = lout;
+        out.tailL = vstar-al;
+        out.fanL = 1;
+	}
+	if (vstar >= right.v)//right-moving shock
+	{
+		ar = a(right)*sqrt(((GAMMA+1)+(GAMMA-1)*pr/right.p)/((GAMMA+1)+(GAMMA-1)*right.p/pr));
+        state rout = {right.v+a(right)*Wr, pr, GAMMA*pr/pow(ar, 2)};
+        out.right = rout;
+        out.fanR = 0;
+	}
+	else//right-moving rarefaction wave
+	{
+        state rout = {right.v+a(right), pr, GAMMA*pl/pow(ar, 2)};
+        out.right = rout;
+        out.tailR = vstar+ar;
+        out.fanR = 1;
+	}
+    return out;
 
 }
-
 void update(state domain[], flux fluxes[])
 {
 	int i;
@@ -247,19 +186,133 @@ void update(state domain[], flux fluxes[])
 		rho += DT/DX*fluxes[i].rhodot;
 		momentum += DT/DX*fluxes[i].momentumdot;
 		energy += DT/DX*fluxes[i].energydot;
+        assert(energy > 0);
+        assert(rho > 0);
 		//revert to non-conserved quantities
 		domain[i].v = momentum/rho;
 		domain[i].rho = rho;
 		domain[i].p = (energy-0.5*rho*momentum*domain[i].v)*(GAMMA-1);
+        assert(domain[i].p > 0);
 	}
 }
 
+flux add_flux(flux left, flux right)
+{
+    flux out;
+    out.rhodot = left.rhodot-right.rhodot;
+    out.momentumdot = left.momentumdot-right.momentumdot;
+    out.energydot = left.energydot-right.energydot;
+    return out;
+}
+
+flux flux_calc(riemann sol)
+{
+    state u0;
+    if(sol.vstar < 0)//Left-moving contact
+    {
+        //Left moving shock or fan head
+        if( (!sol.fanR && sol.right.v < 0) || (sol.fanR && sol.right.v < 0) )
+        {
+            u0 = sol.right0;
+        }
+        else if( !sol.fanR && sol.right.v > 0 )//Right-moving shock
+        {
+            u0 = sol.right;
+        }
+        else if( sol.fanR && sol.tailR > 0)//Right-moving fan tail
+        {
+            float vpost;//the post-fan velocity
+            if(sol.fanL)
+            {
+                vpost = sol.vstar;
+            }
+            else
+            {
+                vpost = sol.left.v;
+            }
+            u0 = sol.right;
+            u0.v = vpost;
+        }
+        else if( sol.fanR && sol.tailR < 0 && sol.right.v > 0)//Inside the fan!
+        {
+            float vpost;//the post-fan velocity
+            if(sol.fanL)
+            {
+                vpost = sol.vstar;
+            }
+            else
+            {
+                vpost = sol.left.v;
+            }
+            float vdot = (vpost-sol.right0.v)/((sol.tailR-sol.right.v));
+            float rhodot = (sol.right.rho-sol.right0.rho)/((sol.tailR-sol.right.v));
+            float pdot = (sol.right.p-sol.right0.p)/((sol.tailR-sol.right.v));
+            u0.v = vpost-vdot*sol.tailR;
+            u0.rho = sol.right.rho-rhodot*sol.tailR;
+            u0.p= sol.right.p-pdot*sol.tailR;
+        }
+        else
+        {
+            assert(0);//We should NEVER be here
+        }
+    }
+    else//Right-moving contact
+    {
+        //Right moving shock or fan head
+        if( (!sol.fanL && sol.left.v > 0) || (sol.fanL && sol.left.v > 0) )
+        {
+            u0 = sol.left0;
+        }
+        else if( !sol.fanL && sol.left.v < 0 )//Right-moving shock
+        {
+            u0 = sol.left;
+        }
+        else if( sol.fanL && sol.tailL < 0)//Right-moving fan tail
+        {
+            float vpost;//the post-fan velocity
+            if(sol.fanR)
+            {
+                vpost = sol.vstar;
+            }
+            else
+            {
+                vpost = sol.right.v;
+            }
+            u0 = sol.left;
+            u0.v = vpost;
+        }
+        else if( sol.fanL && sol.tailL > 0 && sol.left.v < 0)//Inside the fan!
+        {
+            float vpost;//the post-fan velocity
+            if(sol.fanR)
+            {
+                vpost = sol.vstar;
+            }
+            else
+            {
+                vpost = sol.right.v;
+            }
+            float vdot = (vpost-sol.left0.v)/((sol.tailL-sol.left.v));
+            float rhodot = (sol.left.rho-sol.left0.rho)/((sol.tailL-sol.left.v));
+            float pdot = (sol.left.p-sol.left0.p)/((sol.tailL-sol.left.v));
+            u0.v = vpost-vdot*sol.tailL;
+            u0.rho = sol.left.rho-rhodot*sol.tailL;
+            u0.p= sol.left.p-pdot*sol.tailL;
+        }
+        else
+        {
+            assert(0);//We should NEVER be here
+        }
+
+    }
+    return fluxify(u0);
+}
 void evolve(state domain[])
 {
 	int j;
 	float i;
 	state tmp;
-	flux left, right;
+	riemann left, right;
 	flux fluxes[NCELLS];
 	for(i=0; i<TIME; i+=DT)
 	{
@@ -268,22 +321,27 @@ void evolve(state domain[])
 		{
 			if (j == 0)//Lefthand boundary
 			{
-				left = iterate(domain[j], domain[j], j);
-				right = iterate(domain[j], domain[j+1], j);
+				left = iterate(domain[j], domain[j]);
+				right = iterate(domain[j], domain[j+1]);
 			}
 			else if(j == NCELLS-1)//Righthand boundary
 			{
-				left = iterate(domain[j-1], domain[j], j);
-				right = iterate(domain[j], domain[j], j);
+				left = iterate(domain[j-1], domain[j]);
+				right = iterate(domain[j], domain[j]);
 			}
 			else
 			{
-				left = iterate(domain[j-1], domain[j], j);
-				right = iterate(domain[j], domain[j+1], j);
+				left = iterate(domain[j-1], domain[j]);
+				right = iterate(domain[j], domain[j+1]);
 			}
-			fluxes[j].rhodot = left.rhodot-right.rhodot;
-			fluxes[j].momentumdot = left.momentumdot-right.momentumdot;
-			fluxes[j].energydot = left.energydot-right.energydot;
+            if(j > 17 && j < 22)
+            {
+                flux lflux = flux_calc(left);
+                flux rflux = flux_calc(right);
+                /*printf("j: %d l_drho: %f l_dmom: %f l_de: %f\n", j, lflux.rhodot, lflux.momentumdot, lflux.energydot);*/
+                /*printf("j: %d r_drho: %f r_dmom: %f r_de: %f\n", j, rflux.rhodot, rflux.momentumdot, rflux.energydot);*/
+            }
+            fluxes[j] = add_flux(flux_calc(left), flux_calc(right));
 		}
 		update(domain, fluxes);
 	}

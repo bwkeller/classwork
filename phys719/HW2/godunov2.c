@@ -18,6 +18,15 @@ typedef struct state
 	float p;
 	float rho;
 } state;
+//
+//This struct defines the conservative fluxes
+typedef struct flux
+{
+	float rhodot;
+	float pdot;
+	float edot;
+} flux;
+
 
 typedef struct riemann
 {
@@ -46,8 +55,6 @@ int read_input(state domain[], char filename[])
 	for(i=0; i<NCELLS; i++)
 	{
 		fscanf(infile, "%f %f %f", &(domain[i].v), &(domain[i].p), &(domain[i].rho));
-		domain[i].v += 0.08;
-		/*domain[i].v *= -1;*/
 	}
 	fclose(infile);
 	return 0;
@@ -202,25 +209,20 @@ state get_interface_state(riemann interface)
 			interface.right0.p == interface.left0.p &&
 			interface.right0.rho == interface.right0.rho)//weird equal-states case
 	{
-		printf("Equal!\n");
 		return interface.right0;
 	}
 	if(interface.right.v < 0)//Right wave has moved past boundary
 	{
-		printf("6\n");
 		return interface.right0;
 	}
 	if(interface.tailR < 0 && interface.tailR != interface.right.v)//Inside a right-moving fan
 	{
-		printf("5\n");
 		return interpolate(interface, 0);//get the right-fan solution
 	}
 	if(interface.vstar < 0)//Between the right-wave and contact
 	{
-		printf("4");
 		if(interface.tailR == interface.right.v)//right wave is a shock
 		{
-			printf(" shock\n");
 			return interface.right;
 		}
 		else//right wave is a fan
@@ -234,16 +236,13 @@ state get_interface_state(riemann interface)
 			{
 				u0.v = interface.left.v;//Use the left shock speed
 			}
-			printf(" fan\n");
 			return u0;
 		}
 	}
 	if(interface.tailL < 0)//Between the contact and the left-wave
 	{
-		printf("3");
 		if(interface.tailL == interface.left.v)//left wave is a shock
 		{
-			printf(" shock\n");
 			return interface.left;
 		}
 		else//left wave is a fan
@@ -257,20 +256,25 @@ state get_interface_state(riemann interface)
 			{
 				u0.v = interface.right.v;//Use the right shock speed
 			}
-			printf(" fan\n");
 			return u0;
 		}
 	}
 	if(interface.left.v < 0 && interface.tailL != interface.left.v)//Inside a left-moving fan
 	{
-		printf("2\n");
 		return interpolate(interface, 1);//get the left-fan solution
 	}
 	else//Left wave has moved past boundary
 	{
-		printf("1\n");
 		return interface.left0;
 	}
+}
+flux calc_flux(state u)
+{
+	flux out;
+	out.rhodot = u.v*u.rho;
+	out.pdot = u.v*u.v*u.rho+u.p;
+	out.edot = u.v*(0.5*u.rho*u.v*u.v+u.p+u.p/(GAMMA-1));
+	return out;
 }
 //Calculate & Apply fluxes over the range t={0,TIME}
 void evolve(state domain[])
@@ -279,6 +283,8 @@ void evolve(state domain[])
 	float i;
 	state u0;//the state at the interface
 	riemann interface;
+	flux jflux;
+	flux fluxes[NCELLS];
 	for(i=0; i<TIME; i+=DT)
 	{
 		printf("Integrating, %f complete\n", i/(float)TIME);
@@ -286,7 +292,8 @@ void evolve(state domain[])
 		{
 			interface = solve_riemann(domain[j], domain[j+1]);
 			u0 = get_interface_state(interface);
-			printf("%d %f %f %f\n", j, u0.v, u0.p, u0.rho);
+			jflux = calc_flux(u0);
+			printf("%d: %f %f %f\n", j, jflux.rhodot, jflux.pdot, jflux.edot);
 		}
 	}
 }

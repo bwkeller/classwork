@@ -46,7 +46,7 @@ int read_input(state domain[], char filename[])
 	for(i=0; i<NCELLS; i++)
 	{
 		fscanf(infile, "%f %f %f", &(domain[i].v), &(domain[i].p), &(domain[i].rho));
-		/*domain[i].v += -0.01;*/
+		domain[i].v += 0.08;
 	}
 	fclose(infile);
 	return 0;
@@ -154,12 +154,30 @@ riemann solve_riemann(state left, state right)
 state interpolate(riemann interface, int side)
 {
 	state out;
+	float vmax, vmin, rhomax, rhomin, pmax, pmin;
 	if(side)//use left wave
 	{
+		vmin = interface.left0.v;
+		pmin = interface.left0.p;
+		rhomin = interface.left0.rho;
+		pmax = interface.left.p;
+		rhomax = interface.left.rho;
+		if(interface.tailR == interface.right.v)//right wave's a shock
+		{
+			vmax = interface.right.v;
+		}
+		else//right wave's a rarefaction
+		{
+			vmax = interface.vstar;
+		}
+		out.v = vmin-(vmax-vmin)/(interface.tailL-interface.left.v)*interface.left.v;
+		out.p = pmin-(pmax-pmin)/(interface.tailL-interface.left.v)*interface.left.v;
+		out.rho = rhomin-(rhomax-rhomin)/(interface.tailL-interface.left.v)*interface.left.v;
 	}
 	else
 	{
 	}
+	return out;
 }
 state get_interface_state(riemann interface)
 {

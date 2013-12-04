@@ -5,11 +5,11 @@
 #define GAMMA 1.4 //Adiabatic index 7/5 for diatomic fluid
 #define a(s) sqrt(GAMMA*s.p/s.rho) //Macro for calculating the soundspeed a
 
-#define TIME  1e-4//Total time to run for
+#define TIME  1//Total time to run for
 #define NCELLS 40 //Size of the domain in cells
 #define XMAX 2 //Physical size of domain
 #define DX (2.0*XMAX/NCELLS) //Grid spacing
-#define DT (DX/4.0) //Timestep size
+#define DT (DX/40.0) //Timestep size
 
 //This struct defines the u state vector that the Fast Riemann Solver wants
 typedef struct state
@@ -80,10 +80,10 @@ int write_output(state domain[])
 float guess_velocity(state left, state right)
 {
 	//Guess the initial flow velocity
-	float z  = a(right)/a(left)*pow(left.p/right.p, (GAMMA-1)/(2*GAMMA));
+	float z  = (a(right)/a(left))*pow(left.p/right.p, (GAMMA-1)/(2*GAMMA));
 	float vtl = left.v+2*a(left)/(GAMMA-1);
 	float vtr = right.v-2*a(right)/(GAMMA-1);
-	return (vtl*z+vtr)/(1+z);
+	return (vtl*z+vtr)/(1.0+z);
 }
 
 
@@ -102,25 +102,25 @@ riemann solve_riemann(state left, state right)
 	{
 		if (vstar <= left.v)//left-moving shock
 		{
-			Wl = (GAMMA+1)/4*(vstar-left.v)/a(left)-sqrt(1+pow((GAMMA+1)/4*(vstar-left.v)/a(left),2));
+			Wl = (GAMMA+1)/4.0*(vstar-left.v)/a(left)-sqrt(1.0+pow((GAMMA+1)/4.0*(vstar-left.v)/a(left),2));
 			pl = left.p+Cl*(vstar-left.v)*Wl;
 			plp = 2*Cl*pow(Wl, 3)/(1+pow(Wl, 2));
 		}
 		else//left-moving rarefaction wave
 		{
-			al = a(left)-(GAMMA-1)/2*(vstar-left.v);
+			al = a(left)-(GAMMA-1)*0.5*(vstar-left.v);
 			pl = left.p*pow(al/a(left), 2*GAMMA/(GAMMA-1));
 			plp = -GAMMA*pl/al;
 		}
 		if (vstar >= right.v)//right-moving shock
 		{
-			Wr = (GAMMA+1)/4*(vstar-right.v)/a(right)+sqrt(1+pow((GAMMA+1)/4*(vstar-right.v)/a(right),2));
+			Wr = (GAMMA+1)/4.0*(vstar-right.v)/a(right)+sqrt(1+pow((GAMMA+1)/4.0*(vstar-right.v)/a(right),2));
 			pr = right.p+Cr*(vstar-right.v)*Wr;
 			prp = 2*Cr*pow(Wr, 3)/(1+pow(Wr, 2));
 		}
 		else//right-moving rarefaction wave
 		{
-			ar = a(right)+(GAMMA-1)/2*(vstar-right.v);
+			ar = a(right)+(GAMMA-1)*0.5*(vstar-right.v);
 			pr = right.p*pow(ar/a(right), 2*GAMMA/(GAMMA-1));
 			prp = GAMMA*pr/ar;
 		}
@@ -152,7 +152,7 @@ riemann solve_riemann(state left, state right)
 	}
 	else//right-moving rarefaction wave
 	{
-        state rout = {right.v+a(right), pr, GAMMA*pl/pow(ar, 2)};
+        state rout = {right.v+a(right), pr, GAMMA*pr/pow(ar, 2)};
         out.right = rout;
         out.tailR = vstar+ar;
 	}
@@ -209,7 +209,7 @@ state get_interface_state(riemann interface)
 			interface.right0.p == interface.left0.p &&
 			interface.right0.rho == interface.right0.rho)//weird equal-states case
 	{
-		return interface.right0;
+		/*return interface.right0;*/
 	}
 	if(interface.right.v < 0)//Right wave has moved past boundary
 	{
@@ -288,9 +288,9 @@ void apply_flux(state domain[], flux fluxes[])
 		p=domain[i].rho*domain[i].v;
 		e=0.5*domain[i].rho*domain[i].v*domain[i].v+domain[i].p/(GAMMA-1);
 		//apply fluxes
-		rho += fluxes[i].rhodot;
-		p += fluxes[i].pdot;
-		e += fluxes[i].edot;
+		rho += DT/DX*fluxes[i].rhodot;
+		p += DT/DX*fluxes[i].pdot;
+		e += DT/DX*fluxes[i].edot;
 		//revert to non-conserved state
 		domain[i].rho = rho;
 		domain[i].v = p/rho;
@@ -321,7 +321,6 @@ void evolve(state domain[])
 			fluxes[j].pdot -= jflux.pdot;
 			fluxes[j].edot -= jflux.edot;
 			jmin1flux = jflux;
-			/*printf("%d: %f %f %f\n", j, fluxes[j].rhodot, fluxes[j].pdot, fluxes[j].edot);*/
 		}
 		apply_flux(domain, fluxes);
 	}

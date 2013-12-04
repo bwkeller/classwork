@@ -5,11 +5,11 @@
 #define GAMMA 1.4 //Adiabatic index 7/5 for diatomic fluid
 #define a(s) sqrt(GAMMA*s.p/s.rho) //Macro for calculating the soundspeed a
 
-#define TIME  1e-5//Total time to run for
-#define NCELLS 4 //Size of the domain in cells
+#define TIME  1e-4//Total time to run for
+#define NCELLS 40 //Size of the domain in cells
 #define XMAX 2 //Physical size of domain
 #define DX (2.0*XMAX/NCELLS) //Grid spacing
-#define DT (DX/200.0) //Timestep size
+#define DT (DX/4.0) //Timestep size
 
 //This struct defines the u state vector that the Fast Riemann Solver wants
 typedef struct state
@@ -276,6 +276,27 @@ flux calc_flux(state u)
 	out.edot = u.v*(0.5*u.rho*u.v*u.v+u.p+u.p/(GAMMA-1));
 	return out;
 }
+//Apply the fluxes
+void apply_flux(state domain[], flux fluxes[])
+{
+	float rho,p,e;
+	int i;
+	for(i=1;i<NCELLS-1;i++)
+	{
+		//get conserved quantities
+		rho=domain[i].rho;
+		p=domain[i].rho*domain[i].v;
+		e=0.5*domain[i].rho*domain[i].v*domain[i].v+domain[i].p/(GAMMA-1);
+		//apply fluxes
+		rho += fluxes[i].rhodot;
+		p += fluxes[i].pdot;
+		e += fluxes[i].edot;
+		//revert to non-conserved state
+		domain[i].rho = rho;
+		domain[i].v = p/rho;
+		domain[i].p = (GAMMA-1)*(e-0.5*p*p/rho);
+	}
+}
 //Calculate & Apply fluxes over the range t={0,TIME}
 void evolve(state domain[])
 {
@@ -283,8 +304,10 @@ void evolve(state domain[])
 	float i;
 	state u0;//the state at the interface
 	riemann interface;
-	flux jflux;
+	flux jflux = {0,0,0};
+	flux jmin1flux = {0,0,0};
 	flux fluxes[NCELLS];
+	fluxes[NCELLS-1] = jflux;
 	for(i=0; i<TIME; i+=DT)
 	{
 		printf("Integrating, %f complete\n", i/(float)TIME);
@@ -293,8 +316,14 @@ void evolve(state domain[])
 			interface = solve_riemann(domain[j], domain[j+1]);
 			u0 = get_interface_state(interface);
 			jflux = calc_flux(u0);
-			printf("%d: %f %f %f\n", j, jflux.rhodot, jflux.pdot, jflux.edot);
+			fluxes[j] = jmin1flux;
+			fluxes[j].rhodot -= jflux.rhodot;
+			fluxes[j].pdot -= jflux.pdot;
+			fluxes[j].edot -= jflux.edot;
+			jmin1flux = jflux;
+			/*printf("%d: %f %f %f\n", j, fluxes[j].rhodot, fluxes[j].pdot, fluxes[j].edot);*/
 		}
+		apply_flux(domain, fluxes);
 	}
 }
 

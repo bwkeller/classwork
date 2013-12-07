@@ -1,2 +1,2 @@
-godunov: godunov.c
-	gcc -lm godunov.c -o godunov
+godunov: godunov2.c
+	gcc -lm godunov2.c -o godunov

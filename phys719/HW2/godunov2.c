@@ -1,15 +1,14 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-#define EPS 1e-6 //Tolerance for iterative scheme
+#define EPS 1e-5 //Tolerance for iterative scheme
 #define GAMMA 1.4 //Adiabatic index 7/5 for diatomic fluid
 #define a(s) sqrt(GAMMA*s.p/s.rho) //Macro for calculating the soundspeed a
 
 #define TIME  1//Total time to run for
-#define NCELLS 40 //Size of the domain in cells
-#define XMAX 2 //Physical size of domain
-#define DX (2.0*XMAX/NCELLS) //Grid spacing
-#define DT (DX/40.0) //Timestep size
+#define NCELLS 400 //Size of the domain in cells
+#define DX 0.01 //Grid spacing
+#define DT 0.001//Timestep size
 
 //This struct defines the u state vector that the Fast Riemann Solver wants
 typedef struct state
@@ -159,58 +158,41 @@ riemann solve_riemann(state left, state right)
     return out;
 
 }
+//Use this to get the state inside rarefaction fans
 state interpolate(riemann interface, int side)
 {
 	state out;
-	float vmax, vmin, rhomax, rhomin, pmax, pmin;
+	float vmax, vmin, rhomax, pmax, amax, amin, a;
 	if(side)//use left wave
 	{
+        amin = a(interface.left0);
+        amax = a(interface.left);
 		vmin = interface.left0.v;
-		pmin = interface.left0.p;
-		rhomin = interface.left0.rho;
 		pmax = interface.left.p;
 		rhomax = interface.left.rho;
-		if(interface.tailR == interface.right.v)//right wave's a shock
-		{
-			vmax = interface.right.v;
-		}
-		else//right wave's a rarefaction
-		{
-			vmax = interface.vstar;
-		}
+        vmax = interface.vstar;
 		out.v = vmin-(vmax-vmin)/(interface.tailL-interface.left.v)*interface.left.v;
-		out.p = pmin-(pmax-pmin)/(interface.tailL-interface.left.v)*interface.left.v;
-		out.rho = rhomin-(rhomax-rhomin)/(interface.tailL-interface.left.v)*interface.left.v;
+		a = amin-(amax-amin)/(interface.tailL-interface.left.v)*interface.left.v;//get sound speed
+        out.rho = rhomax*pow(a/amax, 2/(GAMMA-1));
+        out.p = out.rho*(pmax/rhomax);
 	}
 	else
 	{
+        amin = a(interface.right0);
+        amax = a(interface.right);
 		vmin = interface.right0.v;
-		pmin = interface.right0.p;
-		rhomin = interface.right0.rho;
 		pmax = interface.right.p;
 		rhomax = interface.right.rho;
-		if(interface.tailL == interface.left.v)//left wave's a shock
-		{
-			vmax = interface.left.v;
-		}
-		else//left wave's a rarefaction
-		{
-			vmax = interface.vstar;
-		}
+        vmax = interface.vstar;
 		out.v = vmin-(vmax-vmin)/(interface.tailL-interface.right.v)*interface.right.v;
-		out.p = pmin-(pmax-pmin)/(interface.tailL-interface.right.v)*interface.right.v;
-		out.rho = rhomin-(rhomax-rhomin)/(interface.tailL-interface.right.v)*interface.right.v;
+		a = amin-(amax-amin)/(interface.tailL-interface.right.v)*interface.right.v;//get sound speed
+        out.rho = rhomax*pow(a/amax, 2/(GAMMA-1));
+        out.p = out.rho*(pmax/rhomax);
 	}
 	return out;
 }
 state get_interface_state(riemann interface)
 {
-	if(interface.right0.v == interface.left0.v && 
-			interface.right0.p == interface.left0.p &&
-			interface.right0.rho == interface.right0.rho)//weird equal-states case
-	{
-		/*return interface.right0;*/
-	}
 	if(interface.right.v < 0)//Right wave has moved past boundary
 	{
 		return interface.right0;
@@ -221,43 +203,15 @@ state get_interface_state(riemann interface)
 	}
 	if(interface.vstar < 0)//Between the right-wave and contact
 	{
-		if(interface.tailR == interface.right.v)//right wave is a shock
-		{
-			return interface.right;
-		}
-		else//right wave is a fan
-		{
-			state u0 = interface.right;
-			if(interface.tailR == interface.right.v)//left wave is a fan
-			{
-				u0.v = interface.vstar;//Use the contact speed
-			}
-			else
-			{
-				u0.v = interface.left.v;//Use the left shock speed
-			}
-			return u0;
-		}
+        state u0 = interface.right;
+        u0.v = interface.vstar;//Use the contact speed
+        return u0;
 	}
 	if(interface.tailL < 0)//Between the contact and the left-wave
 	{
-		if(interface.tailL == interface.left.v)//left wave is a shock
-		{
-			return interface.left;
-		}
-		else//left wave is a fan
-		{
-			state u0 = interface.left;
-			if(interface.tailL == interface.left.v)//right wave is a fan
-			{
-				u0.v = interface.vstar;//Use the contact speed
-			}
-			else
-			{
-				u0.v = interface.right.v;//Use the right shock speed
-			}
-			return u0;
-		}
+        state u0 = interface.left;
+        u0.v = interface.vstar;//Use the contact speed
+        return u0;
 	}
 	if(interface.left.v < 0 && interface.tailL != interface.left.v)//Inside a left-moving fan
 	{
@@ -307,7 +261,6 @@ void evolve(state domain[])
 	flux jflux = {0,0,0};
 	flux jmin1flux = {0,0,0};
 	flux fluxes[NCELLS];
-	fluxes[NCELLS-1] = jflux;
 	for(i=0; i<TIME; i+=DT)
 	{
 		printf("Integrating, %f complete\n", i/(float)TIME);

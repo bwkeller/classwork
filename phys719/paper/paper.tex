@@ -1,0 +1,266 @@
+\documentclass[12pt, preprint]{aastex}
+\usepackage{float}
+\usepackage[cm]{fullpage}
+\begin{document}
+
+\title{Physics 719 Term Paper: AREPO, a Hydrodynamics Solver on an Unstructured
+Moving Mesh}
+\author{Ben Keller}
+\maketitle
+\newpage
+\section{Introduction}
+AREPO solves the Euler equations using a novel method: rather than calculating
+fluxes through a fixed, structured grid (Cartesian or otherwise), it generates
+an unstructured mesh on the fly from state information of the volume and
+uses that mesh to define where fluxes are calculated \citep{springel2009}.  By
+allowing the fluid flow to define the grid, AREPO is meant to serve as a
+compromise between the alternate formulations of hydrodynamics: Eulerian (i.e.
+grid based methods), and Lagrangian (ie, particle based methods).  It is part of
+a family of hybrid techniques: ``Arbitrary Lagrangian-Eulerian'' (ALE) methods.
+
+While both the Lagrangian and Eulerian formulations are equally valid from a
+mathematical standpoint, each has weaknesses when applied to solve problems
+where only finite resolution and computational resources are available. Eulerian
+codes are able to use Godunov-type methods to capture shocks without the need
+for high spatial resolution, and also suppress spurious artifacts (post-shock
+ringing, etc.), while smoothed particle hydrodynamics (SPH, the dominant
+Lagrangian method) require both more resolution and carefully chosen explicit
+artificial viscosity (AV) to accurately capture strong shocks.  Eulerian codes
+suffer from the fact that their grids act as unphysical preferred frames of
+reference (they lack Galilean invariance), introducing spurious diffusion as
+features are smeared over grid cells. Additionally, they often require much
+smaller timesteps criteria than SPH codes.  
+
+In this paper, I will first explain how AREPO solves the Euler equations using a
+finite volume method over a moving Voronoi mesh.  A Voronoi mesh is a unique
+tessellation of all points where each cell is composed of space closer to the
+contained mesh-generating point than any other mesh generation point.  As a
+large amount of effort is required to construct and maintain this mesh, the
+second section covers these mesh-generation routines.  In the penultimate
+section, I explain how AREPO does its time integration, as it uses a careful
+timestep criteria and multiple timesteps. Finally, I conclude with
+some remarks about where AREPO stands in a somewhat crowded field of
+astrophysics simulation codes.  AREPO also includes modifications to the Euler
+equations for self-gravitating fluids and cosmological expansion, mesh
+refinement and de-refinement, as well as a dual-energy formulation for use in
+low-resolution simulations of cold, supersonic flows that I will not discuss
+here out of space consideration.
+\section{AREPO's Finite Volume Hydrodynamics Method} 
+\subsection{Core Method}
+While the idea of solving the fluid equations on an unstructured mesh
+\citep{xu1997} or a moving mesh \citep{gnedin1995} is not new, using
+\textit{both} of these methods simultaneously was not heavily explored prior to
+AREPO.  The basic derivation of the method follows fairly similarly to 
+other Monotone Upstream-centered Schemes for Conservation Laws (MUSCL), with a
+few differences.  To integrate the primitive state vector $\mathbf{U}$, with
+flux vector $\mathbf{F}$ and cell-averaged value $\mathbf{Q}$:
+\begin{equation}
+	\begin{array}{l l l}
+		\mathbf{U} = (\rho, \rho\mathbf{v}, \rho e),  &
+		\mathbf{F} = (\rho\mathbf{v}, \rho v^2+P, \mathbf{v}(\rho e+P)), &
+	\mathbf{Q_i} = (m_i, \mathbf{p_i}, E_i), \\
+\end{array}
+\end{equation}
+AREPO first calculates a flux across across each face (with surface normal
+$\mathbf{A_{ij}}$ of a given mesh cell):
+\begin{equation}
+	\mathbf{F_{ij}} = \frac{1}{A_{ij}}\int_{A_{ij}}
+	[\mathbf{F(U)-Uw}]d\mathbf{A_{ij}}
+\end{equation}
+where $\mathbf{w}$ is the velocity of the the boundary itself (naturally, this
+term is omitted in the Eulerian form).  With these fluxes, the cell-averaged
+values can be updated simply using a Godunov-type scheme:
+\begin{equation}
+	Q_{i}^{n+1} = Q_i^n -\Delta t \sum_j A_{ij} \mathbf{\hat F_{ij}^{n+1/2}}
+\end{equation}
+where $\mathbf{\hat F_{ij}}$ is a time-average approximate flux.  AREPO uses an
+unsplit method, where fluxes are calculated for each face before any are
+applied.  These fluxes can be generated using a slope-limited piecewise linear
+approximation.  To determine the slope of the approximation, AREPO uses a
+gradient for each of the primitive variables, estimated using the vector between
+the mesh-generating points (more details on these points can be found in section
+3), $\mathbf{r_{ij}}$, and the vector from the midpoint of this vector to the
+$ij$-face's center of mass $\mathbf{c_{ij}}$:
+\begin{equation}
+	\nabla \phi_i = \frac{1}{V_i}\sum_{i\neq j}
+	A_{ij}\left([\phi_j-\phi_i]\mathbf{\frac{c_{ij}}{r_{ij}}} -
+\frac{\phi_i+\phi_j}{2}\frac{\mathbf{r_{ij}}}{r_{ij}}\right)
+\end{equation}
+The linear approximation for in each cell, with center of mass $\mathbf{s_i}$
+becomes: 
+\begin{equation}
+	\phi(\mathbf{r}) = \phi_i + \nabla \phi_i\cdot(\mathbf{r-s_i})
+\end{equation}
+This gives a second order space and time accuracy, with a stencil consisting of the
+cell and all its neighbours.  In order for the integration scheme
+to remain monotonicity preserving (MP), a slope limiter is used to ensure that the
+estimate doesn't over/undershoot in cases involving discontinuous flow:
+\begin{equation}
+	\nabla\phi_{i,limited} = \mathrm{min}(1,\Psi_{ij})\nabla\phi_{i}
+\end{equation}
+\begin{equation}
+	\Psi_{ij} = \left\{
+		\begin{array}{l l l}
+			(\phi_i^{max}-\phi_i)/\Delta\phi_{ij} & if & \Delta\phi_{ij} > 0\\
+			(\phi_i^{min}-\phi_i)/\Delta\phi_{ij} & if & \Delta\phi_{ij} < 0\\
+			1 & if \Delta\phi_{ij} = 0
+	\end{array} \right.
+\end{equation}
+This acts to reduce the order of the method near discontinuities, and ensures
+that monotonicity is preserved. AREPO uses a somewhat liberal slope limiter 
+that makes it MP, but not total variation diminishing (TVD), making the scheme
+less dissipative overall at the cost of allowing some artifacts to be produced
+at shocks.
+\subsection{Calculating Fluxes}
+To calculate the flux through a cell face, first the face's local frame velocity
+must be calculated.  For a face bounding two cells, with velocities $w_R$ and
+$w_L$, the face velocity $w$ is:
+\begin{equation}
+	w = \frac{w_R+w_L}{2}+w'
+\end{equation}
+where $w'$ is a rotation term to account for the component of the velocity
+arising from the relative motion of the cell centers of mass and their
+mesh-generating points.  Once this is calculated, the lab-frame states of each
+cell is first boosted to the face's rest frame.  The state vectors are then
+interpolated to find their values on the face's centroid, at $\Delta t/2$.
+These interpolated values are then multiplied by a rotation matrix $\Lambda$ to bring
+their x-axis perpendicular to the face.  This finally allows the solution
+$\mathbf{W_F}$ to a 1D Riemann problem across the face to be calculated. By
+reversing the rotation and the boost, this solution in the lab frame
+$\mathbf{W_{lab}}$ can be determined:
+\begin{equation}
+	\mathbf{W_{lab}} = \Lambda^{-1}\mathbf{W_F+w}
+\end{equation}
+This is the used to generate the flux vector $\mathbf{\hat F}$:
+\begin{equation}
+	\mathbf{\hat F = F(W_{lab}) - W_{lab}\cdot w}
+\end{equation}
+Using this, the AREPO scheme is Galilean invariant, as fluxes are all
+calculated in the invariant boundary frame.
+\section{Building \& Maintaining Voronoi Meshes}
+Solving the fluid equations over a Voronoi mesh is only half the battle of
+evolving a set of initial conditions with AREPO.  Before each step in the
+hydrodynamics solver begins, a new tessellation must be computed; after each
+step, the points that generate the mesh must be moved (at the velocity of their
+cell's fluid).
+\subsection{Initial Construction}
+Given a set of points, there exists only one tessellation in which each cell
+contains only points closest to its contained point: the Voronoi tessellation.
+AREPO exploits a convenient fact that every Voronoi tessellation has a dual
+tessellation, the Delaunay, that is much easier computed.  The Delaunay mesh is a
+triangulation which places a triangle across chords of a circumsphere that contains on
+its edge the three vertex points (mesh generating points), such that this
+circle contains no mesh generating points.  This can be built using recursive
+divide-and-conquer algorithms similar to quicksort (e.g. \textit{quickhull}
+\citep{barber1996}, \textit{Dewall}\citep{cignoni1997}). These algorithms have
+asymptotic cost comparable to tree-building ($O(N\log N)$ in the average case,
+$O(N^2)$ in the worst case).  Once the Delaunay triangulation is completed, the
+Voronoi faces are generated using the midpoints of the Delaunay circumspheres as
+the vertices of the Voronoi cells.  This gives each cell a set of faces, a
+volume, and a center of mass that is then used by the hydrodynamics solver to
+evolve the system.
+\subsection{Restructuring}
+While the ``pure'' Voronoi tessellation is perfectly capable of being evolved
+forward in time without introducing error-causing mesh artifacts, it can often
+produce a very anisotropic mesh, even in situations where the physical density
+of a volume is isotropic. This doesn't affect the accuracy of the method, but it
+does increase its cost.  To deal with this, AREPO introduces a small numerical
+``kick'' to the mesh-generator velocities, to move their mesh-generating points
+towards their centers of mass.  If these points are close, then the resulting
+Voronoi cells are highly regular at equal density after a small number of
+iterations.  AREPO adds a velocity kick (less than the sound speed $c_i$) to the velocities of the mesh
+generators if the distance $d_i$ between their centers of mass $\mathbf{s_i}$
+and mesh-generators $\mathbf{r_i}$ become more than some fraction $\eta$ of the the
+cell radius $R_i$ (see equation 12).  
+\begin{equation}
+	\mathbf{w_i'} = \mathbf{w_i}+\left\{
+		\begin{array}{l l l}
+			0 & if & d_i/(\eta R_i) < 0.9\\
+			c_i\frac{\mathbf{s_i-r_i}}{d_i}\frac{d_j-0.9\eta R_i}{0.2\eta R_i} & if & 0.9\leq d_i/(\eta R_i) < 1.1\\
+			c_i\frac{\mathbf{s_i-r_i}}{d_i} & if & 1.1\leq d_i/(\eta R_i) \\
+	\end{array} \right.
+\end{equation}
+AREPO typically uses a threshold of $\eta=1/4$. This kick acts to keep cells
+``round'' as the simulation evolves.  As the solver is fully Galilean invariant,
+the boost resulting from these kicks does not result in any errors introduced in
+the hydrodynamics solutions.  It appears to me that this would introduce a small
+amount of shot-noise into the mesh velocity field, which may manifest in the
+solution AREPO produces.
+\section{Time Integration \& Independent Timesteps}
+The general CFL condition used in AREPO calculates an effective distance scale
+$R_i$, sound speed $c_i$ and flow velocity relative to the grid $v_i'$ (which is
+typically negligible because of the semi-Lagrangian mesh motion).  Preventing
+$R_i$ from becoming small is one of the primary reasons for mesh restructuring.
+\begin{equation}
+	\begin{array}{l l l}
+		R_i = (3V_i/4\pi)^{1/3}, & &
+	\Delta t_i = C_{CFL}\frac{R_i}{c_i+v_i'}\\
+\end{array}
+\end{equation}
+AREPO typically adopts $C_{CFL} \approx 0.4-0.8$.  Since these timesteps are
+calculated individually per cell, individual cells are capable of being run at
+different time resolutions, depending on their local velocities and densities.
+AREPO gives each cell a timestep that is a power of two smaller than the global
+timestep, such that the above timestep criteria is obeyed for all cells.
+
+Since this calculation only examines local properties, it needs a way to
+anticipate interactions with approaching supersonic flows. In order to do this,
+AREPO takes the smaller of the timestep from equation 12 or the distance over
+the ``signal speed'' (flow velocity+sound speed) between two cells.  It uses a
+tree-based search in order to find all other cells and calculate the non-local
+timesteps for each cell (at a cost of $O(N\log N)$, compared to $O(1)$ for a
+\citet{saitoh2009} type limit).
+
+For each face, the smaller timestep of the two cells at the interface is used.
+Each substep then calculates fluxes for all faces that reside on that timestep
+or, a smaller timestep (active faces) (e.g. a face on a step 1/4 the timestep of
+another face will calculate fluxes 4 times for every 1 time the long step face
+calculates them).  At the end of each substep, the mesh is rebuilt for active
+cells.  Cells that are not active ``store up'' fluxes coming from faces that are
+on shorter timesteps, and apply them once they complete their step.
+
+
+This looks to me to be potentially the most problematic aspect of the method, as
+you ought to have (if you want to preserve the Lagrangian aspect) the grid fully
+rebuilt every time \textit{any} cell is evolved, but the grid is only rebuilt
+for the active cells.  This means the faces that the fluxes between cells on
+small timesteps and cells on large timesteps become less accurate as the
+difference in timestep increases (and thus the fluxes calculated become less
+accurate). In other words, the longer the range in timesteps, the less
+Lagrangian the method is.
+
+\section{Conclusion}
+AREPO seems to be a clever mix of the Eulerian and Lagrangian approaches to
+fluid mechanics.  It promises to deliver accurate, low diffusivity shock
+capturing with a 2nd order space and time accurate, unsplit Godunov MUSCL
+method.  At the same time, it has modified the Eulerian version of this method
+to be Galilean invariant, and provide Courant times competitive with SPH.  For
+simulations of highly supersonic, cold flows (situations like turbulence in the
+cold ISM), AREPO likely offers one of the best methods available.
+
+Whether it becomes a serious challenge to popular SPH and AMR codes will depend
+on whether the additional cost of the method is worth the accuracy it provides.
+AREPO needs to solve 2 Riemann problems per face, with much more faces per cell
+than in a standard Cartesian grid.  Its timestep estimator is also fairly
+expensive and quite conservative.  In a fairly small galaxy cluster test ($32^3$
+particles), AREPO was 60\% slower than a comparable SPH code.  If AREPO can be
+shown to scale well to both large numbers of cells and large numbers of
+processors, it has a good chance of becoming one of the frontrunners in the
+field of cosmological hydrodynamics codes.
+\begin{thebibliography}{}
+	\bibitem[Gnedin (1995)]{gnedin1995} Gnedin, N. Y. 1995.
+		ApJS, 97, 231
+	\bibitem[Bradford Barber et al. (1996)]{barber1996} Bradford Barber, C. et
+		al. 1996.
+		ACM Transactions on Mathematical Software 22, 469
+	\bibitem[Xu (1997)]{xu1997} Xu, G. 1997.
+		MNRAS 288, 903
+	\bibitem[Cignoni Z et al. (1997)]{cignoni1997} Cignoni Z, P et al. 1997.
+		Computer-Aided Design, 30, 333
+	\bibitem[Saito \& Makino (2009)]{saitoh2009} Saitoh, T. R. \& Makino, J
+		2009. ApJ 697, 99
+	\bibitem[Springel (2009)]{springel2009} Springel, V. 2009.
+		MNRAS 401, 791
+\end{thebibliography}
+
+\end{document}
